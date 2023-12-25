@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Product from './components/ProductLook';
 import productList from './components/Products';
+import { transferToOwner, connectMetamask } from './components/connection';
 
 const ProductList = () => {
   const [cart, setCart] = useState([]);
@@ -14,17 +15,44 @@ const ProductList = () => {
     setCart([...cart, product]);
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     const updatedProducts = products.filter((item) => !item.addedToCart);
     setProducts(updatedProducts);
-    setTimeout(() => {
-      setCart([]);
-    }, 50); // Delay clearing cart to match the animation time
+    
+    const totalAmount = calculateTotal();
+  
+    try {
+      // Connect to MetaMask and request access
+      const { accounts, instance } = await connectMetamask();
+      console.log('accounts' , accounts)
+  
+      // If there are accounts and MetaMask is connected
+      if (accounts && accounts.length > 0) {
+        // Call the transferToOwner function with the total amount
+        await transferToOwner(totalAmount);
+    
+        // Clear the cart after successful transfer
+        setCart([]);
+       
+          
+      } else {
+        // If MetaMask connection fails or no accounts found
+        alert('Please connect to MetaMask to proceed with the transaction.');
+      }
+
+    } catch (error) {
+      // Handle errors or display alerts if the transaction fails
+      alert('Failed to complete the transaction. Please check the console for details.');
+      console.error(error);
+    }
+     // Delay clearing cart to match the animation time
   };
 
   const calculateTotal = () => {
     const totalAmount = cart.reduce((total, item) => total + item.price, 0);
-    return totalAmount;
+    // Use toFixed(5) to get the total with 5 decimal places and convert it back to a number
+    const roundedTotal = Number(totalAmount.toFixed(5));
+    return roundedTotal;
   };
 
   return (
@@ -49,7 +77,7 @@ const ProductList = () => {
         ))}
       </div>
       <div style={styles.total}>
-        <p style={styles.totalAmount}>Total Amount: ${calculateTotal()}</p>
+        <p style={styles.totalAmount}>Total Amount: {calculateTotal()} ETH</p>
         <button onClick={handleBuyNow} style={styles.buyNowButton}>
           Pay
         </button>
